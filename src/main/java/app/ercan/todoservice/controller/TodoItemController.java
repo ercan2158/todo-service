@@ -5,9 +5,17 @@ import app.ercan.todoservice.dto.TodoItemDto;
 import app.ercan.todoservice.service.TodoItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/todos")
@@ -22,7 +30,7 @@ public class TodoItemController {
 
     @PostMapping
     @Operation(summary = "Add a new item")
-    public TodoItemDto addItem(@RequestBody AddTodoItemDto addTodoItemDto) {
+    public TodoItemDto addItem(@Valid @RequestBody AddTodoItemDto addTodoItemDto) {
         return todoItemService.addItem(addTodoItemDto);
     }
 
@@ -51,4 +59,16 @@ public class TodoItemController {
     }
 
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Map<String, String> handleValidationExceptions(
+            MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return errors;
+    }
 }

@@ -4,6 +4,7 @@ import app.ercan.todoservice.dto.AddTodoItemDto;
 import app.ercan.todoservice.dto.TodoItemDto;
 import app.ercan.todoservice.entity.Status;
 import app.ercan.todoservice.entity.TodoItem;
+import app.ercan.todoservice.exception.ItemPastDueException;
 import app.ercan.todoservice.repository.TodoItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,17 +34,17 @@ public class TodoItemService {
         return toTodoItemDTO(savedItem);
     }
 
-    public List<TodoItemDto> getAllItems(boolean all) {
 
-        List<TodoItem> todoItems;
+    public List<TodoItemDto> getAllItems() {
 
-        if (all) {
-            todoItems = todoItemRepository.findAll();
-        } else {
-            todoItems = todoItemRepository.findByStatus(Status.NOT_DONE);
-        }
+        return todoItemRepository.findAll().stream()
+                .map(this::toTodoItemDTO)
+                .collect(Collectors.toList());
+    }
 
-        return todoItems.stream()
+    public List<TodoItemDto> getAllNotDoneItems() {
+
+        return todoItemRepository.findByStatus(Status.NOT_DONE).stream()
                 .map(this::toTodoItemDTO)
                 .collect(Collectors.toList());
     }
@@ -57,6 +58,34 @@ public class TodoItemService {
         return todoItemRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Item not found with id: " + id));
     }
 
+    public TodoItemDto markAsDone(Long id) {
+        TodoItem todoItem = findTodoItemById(id);
+
+        checkIfPastDue(todoItem);
+
+        todoItem.setStatus(Status.DONE);
+        todoItem.setCompletionDateTime(LocalDateTime.now());
+        TodoItem updatedItem = todoItemRepository.save(todoItem);
+        return toTodoItemDTO(updatedItem);
+    }
+
+    public TodoItemDto markAsNotDone(Long id) {
+        TodoItem todoItem = findTodoItemById(id);
+
+        checkIfPastDue(todoItem);
+
+        todoItem.setStatus(Status.NOT_DONE);
+        todoItem.setCompletionDateTime(null);
+        TodoItem updatedItem = todoItemRepository.save(todoItem);
+        return toTodoItemDTO(updatedItem);
+    }
+
+
+    private void checkIfPastDue(TodoItem todoItem) {
+        if (todoItem.getStatus() == Status.PAST_DUE) {
+            throw new ItemPastDueException("Item with id: " + todoItem.getId() + " is past due and cannot be modified.");
+        }
+    }
 
     TodoItemDto toTodoItemDTO(TodoItem todoItem) {
         if (todoItem == null) {

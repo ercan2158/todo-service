@@ -37,6 +37,8 @@ public class TodoItemService {
 
     public List<TodoItemDto> getAllItems() {
 
+        updatePastDueItems();// Before returning the items, ensure that all the past due items are updated.
+
         return todoItemRepository.findAll().stream()
                 .map(this::toTodoItemDTO)
                 .collect(Collectors.toList());
@@ -51,6 +53,9 @@ public class TodoItemService {
 
 
     public TodoItemDto getItemDetails(Long id) {
+        //Before returning the item, ensure that the past due is updated.
+        todoItemRepository.updatePastDueItem(LocalDateTime.now(), id);
+
         return toTodoItemDTO(findTodoItemById(id));
     }
 
@@ -80,6 +85,10 @@ public class TodoItemService {
         return toTodoItemDTO(updatedItem);
     }
 
+    public void updatePastDueItems() {
+        LocalDateTime now = LocalDateTime.now();
+        todoItemRepository.updatePastDueItems(now);
+    }
 
     private void checkIfPastDue(TodoItem todoItem) {
         if (todoItem.getStatus() == Status.PAST_DUE) {

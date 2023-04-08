@@ -40,6 +40,15 @@ public class TodoItemController {
         return all ? todoItemService.getAllItems() : todoItemService.getAllNotDoneItems();
     }
 
+    @PutMapping("/{id}/description")
+    @Operation(summary = "Change the description of an item")
+    public TodoItemDto updateDescription(@PathVariable Long id,
+                                         @Valid @RequestBody @NotBlank @Size(max = 100, message = "Description length cannot exceed 100 characters")
+                                                 String description
+    ) {
+        return todoItemService.updateDescription(id, description);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get details of a specific item")
     public TodoItemDto getItemDetails(@PathVariable Long id) {

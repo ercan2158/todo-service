@@ -111,4 +111,11 @@ public class TodoItemService {
                 .build();
     }
 
+    public TodoItemDto updateDescription(Long id, String description) {
+        TodoItem todoItem = findTodoItemById(id);
+        checkIfPastDue(todoItem);
+        todoItem.setDescription(description);
+        TodoItem updatedItem = todoItemRepository.save(todoItem);
+        return toTodoItemDTO(updatedItem);
+    }
 }

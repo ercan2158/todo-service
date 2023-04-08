@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class TodoItemService {
@@ -34,23 +33,21 @@ public class TodoItemService {
         return toTodoItemDTO(savedItem);
     }
 
-
     public List<TodoItemDto> getAllItems() {
 
         updatePastDueItems();// Before returning the items, ensure that all the past due items are updated.
 
         return todoItemRepository.findAll().stream()
                 .map(this::toTodoItemDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<TodoItemDto> getAllNotDoneItems() {
 
         return todoItemRepository.findByStatus(Status.NOT_DONE).stream()
-                .map(this::toTodoItemDTO)
-                .collect(Collectors.toList());
-    }
+                .map(this::toTodoItemDTO).toList();
 
+    }
 
     public TodoItemDto getItemDetails(Long id) {
         //Before returning the item, ensure that the past due is updated.
@@ -64,9 +61,7 @@ public class TodoItemService {
     }
 
     public TodoItemDto markAsDone(Long id) {
-        TodoItem todoItem = findTodoItemById(id);
-
-        checkIfPastDue(todoItem);
+        TodoItem todoItem = getTodoItemIfNotPastDue(id);
 
         todoItem.setStatus(Status.DONE);
         todoItem.setCompletionDateTime(LocalDateTime.now());
@@ -75,9 +70,7 @@ public class TodoItemService {
     }
 
     public TodoItemDto markAsNotDone(Long id) {
-        TodoItem todoItem = findTodoItemById(id);
-
-        checkIfPastDue(todoItem);
+        TodoItem todoItem = getTodoItemIfNotPastDue(id);
 
         todoItem.setStatus(Status.NOT_DONE);
         todoItem.setCompletionDateTime(null);
@@ -90,11 +83,6 @@ public class TodoItemService {
         todoItemRepository.updatePastDueItems(now);
     }
 
-    private void checkIfPastDue(TodoItem todoItem) {
-        if (todoItem.getStatus() == Status.PAST_DUE) {
-            throw new ItemPastDueException("Item with id: " + todoItem.getId() + " is past due and cannot be modified.");
-        }
-    }
 
     TodoItemDto toTodoItemDTO(TodoItem todoItem) {
         if (todoItem == null) {
@@ -111,9 +99,21 @@ public class TodoItemService {
                 .build();
     }
 
+    private TodoItem getTodoItemIfNotPastDue(Long id) {
+        todoItemRepository.updatePastDueItem(LocalDateTime.now(), id);
+
+        var todoItem = findTodoItemById(id);
+
+        if (todoItem.getStatus() == Status.PAST_DUE) {
+            throw new ItemPastDueException("Item with id: " + todoItem.getId() + " is past due and cannot be modified.");
+        }
+
+        return todoItem;
+    }
+
     public TodoItemDto updateDescription(Long id, String description) {
-        TodoItem todoItem = findTodoItemById(id);
-        checkIfPastDue(todoItem);
+        TodoItem todoItem = getTodoItemIfNotPastDue(id);
+
         todoItem.setDescription(description);
         TodoItem updatedItem = todoItemRepository.save(todoItem);
         return toTodoItemDTO(updatedItem);
